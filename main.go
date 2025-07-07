@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/gijssoethout/go-aggregator/internal/config"
 )
@@ -9,13 +10,26 @@ import (
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("error reading config: %v", err)
 	}
-	cfg.SetUser("Gijs")
-	newCfg, err := config.Read()
-	if err != nil {
-		fmt.Println(err)
+
+	programState := &state{
+		cfg: &cfg,
 	}
-	fmt.Println(newCfg.DBURL)
-	fmt.Println(newCfg.CurrentUserName)
+
+	c := commands{
+		registeredCommands: make(map[string]func(*state, command) error),
+	}
+	c.register("login", handlerLogin)
+
+	if len(os.Args) < 2 {
+		log.Fatal("Usage: cli <command> [args...]")
+	}
+	cmd := command{
+		Name: os.Args[1],
+		Args: os.Args[2:],
+	}
+	if err := c.run(programState, cmd); err != nil {
+		log.Fatal(err)
+	}
 }
